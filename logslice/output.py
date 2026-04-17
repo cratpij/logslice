@@ -1,49 +1,53 @@
-"""Output formatting for logslice results."""
+"""Output formatting for logslice records."""
+
 import json
-from typing import Any, Dict, Iterable, TextIO
-import sys
+from typing import Any, IO
+
+from logslice.highlight import highlight_record
 
 
-def format_json(record: Dict[str, Any]) -> str:
-    """Serialize a record back to a compact JSON string."""
-    return json.dumps(record, default=str)
+def format_json(record: dict[str, Any], indent: int | None = None) -> str:
+    """Serialize record as JSON. No trailing newline."""
+    return json.dumps(record, indent=indent, default=str)
 
 
-def format_kv(record: Dict[str, Any]) -> str:
-    """Serialize a record as key=value pairs."""
+def format_kv(record: dict[str, Any]) -> str:
+    """Serialize record as key=value pairs."""
     parts = []
-    for key, value in record.items():
-        if isinstance(value, str) and " " in value:
-            parts.append(f'{key}="{value}"')
-        else:
-            parts.append(f"{key}={value}")
+    for k, v in record.items():
+        sv = str(v)
+        if " " in sv or "=" in sv:
+            sv = f'"{sv}"'
+        parts.append(f"{k}={sv}")
     return " ".join(parts)
 
 
-def format_pretty(record: Dict[str, Any]) -> str:
-    """Serialize a record as indented JSON."""
-    return json.dumps(record, indent=2, default=str)
-
-
-FORMATTERS = {
-    "json": format_json,
-    "kv": format_kv,
-    "pretty": format_pretty,
-}
+def format_pretty(record: dict[str, Any]) -> str:
+    """Return a human-friendly highlighted line for terminal output."""
+    return highlight_record(record)
 
 
 def write_records(
-    records: Iterable[Dict[str, Any]],
+    records: list[dict[str, Any]],
     fmt: str = "json",
-    out: TextIO = sys.stdout,
-) -> int:
-    """Write records to *out* using the given format. Returns count written."""
-    formatter = FORMATTERS.get(fmt)
-    if formatter is None:
-        raise ValueError(f"Unknown format '{fmt}'. Choose from: {list(FORMATTERS)}.")
+    out: IO[str] | None = None,
+    indent: int | None = None,
+) -> None:
+    """Write formatted records to *out* (defaults to stdout)."""
+    import sys
 
-    count = 0
+    if out is None:
+        out = sys.stdout
+
+    formatters = {
+        "json": lambda r: format_json(r, indent=indent),
+        "kv": format_kv,
+        "pretty": format_pretty,
+    }
+
+    formatter = formatters.get(fmt)
+    if formatter is None:
+        raise ValueError(f"Unknown format: {fmt!r}")
+
     for record in records:
         out.write(formatter(record) + "\n")
-        count += 1
-    return count
