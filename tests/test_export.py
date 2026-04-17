@@ -1,5 +1,6 @@
 """Tests for logslice.export."""
 import io
+import json
 import pytest
 from logslice.export import to_jsonl, to_csv, to_tsv, write_export
 
@@ -17,7 +18,6 @@ class TestToJsonl:
         assert len(lines) == 2
 
     def test_each_line_valid_json(self):
-        import json
         for line in to_jsonl(RECORDS).strip().splitlines():
             obj = json.loads(line)
             assert isinstance(obj, dict)
@@ -27,6 +27,13 @@ class TestToJsonl:
 
     def test_trailing_newline(self):
         assert to_jsonl(RECORDS).endswith("\n")
+
+    def test_record_fields_preserved(self):
+        """Each serialised line must contain all original fields and values."""
+        lines = to_jsonl(RECORDS).strip().splitlines()
+        for original, line in zip(RECORDS, lines):
+            obj = json.loads(line)
+            assert obj == original
 
 
 class TestToCsv:
@@ -89,3 +96,10 @@ class TestWriteExport:
     def test_unknown_format_raises(self):
         with pytest.raises(ValueError, match="Unknown export format"):
             write_export(RECORDS, "xml", self._buf())
+
+    def test_write_export_matches_direct_call(self):
+        """write_export output should match the corresponding to_* function."""
+        for fmt, fn in (("jsonl", to_jsonl), ("csv", to_csv), ("tsv", to_tsv)):
+            buf = self._buf()
+            write_export(RECORDS, fmt, buf)
+            assert buf.getvalue() == fn(RECORDS)
