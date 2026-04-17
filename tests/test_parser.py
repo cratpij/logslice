@@ -22,6 +22,11 @@ class TestParseJsonLine:
     def test_whitespace_line_returns_none(self):
         assert parse_json_line("   ") is None
 
+    def test_nested_json_object(self):
+        line = '{"level": "info", "context": {"user": "alice", "id": 42}}'
+        result = parse_json_line(line)
+        assert result == {"level": "info", "context": {"user": "alice", "id": 42}}
+
 
 class TestParseKvLine:
     def test_simple_kv(self):
@@ -37,6 +42,10 @@ class TestParseKvLine:
 
     def test_empty_line_returns_none(self):
         assert parse_kv_line("") is None
+
+    def test_numeric_values(self):
+        result = parse_kv_line("status=200 latency=0.042")
+        assert result == {"status": "200", "latency": "0.042"}
 
 
 class TestParseLine:
@@ -72,3 +81,8 @@ class TestParseLines:
 
     def test_empty_input(self):
         assert parse_lines([]) == []
+
+    def test_returns_list_not_generator(self):
+        """Ensure parse_lines returns a concrete list, not a lazy iterator."""
+        result = parse_lines(['{"level": "info"}'])
+        assert isinstance(result, list)
