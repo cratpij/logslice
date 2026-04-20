@@ -45,3 +45,26 @@ def avg_by(records: List[Dict], group_field: str, value_field: str) -> Dict[str,
         except (KeyError, TypeError, ValueError):
             pass
     return {k: totals[k] / counts[k] for k in totals}
+
+
+def min_max_by(
+    records: List[Dict], group_field: str, value_field: str
+) -> Dict[str, Dict[str, float]]:
+    """Compute the min and max of a numeric field grouped by another field.
+
+    Returns a dict mapping each group key to a dict with 'min' and 'max' keys.
+    Groups where no valid numeric values exist are omitted from the result.
+    """
+    result: Dict[str, Dict[str, float]] = {}
+    for record in records:
+        key = str(record[group_field]) if group_field in record else "__missing__"
+        try:
+            value = float(record[value_field])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if key not in result:
+            result[key] = {"min": value, "max": value}
+        else:
+            result[key]["min"] = min(result[key]["min"], value)
+            result[key]["max"] = max(result[key]["max"], value)
+    return result
