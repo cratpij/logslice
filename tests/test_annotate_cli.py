@@ -61,6 +61,13 @@ class TestRunAnnotate:
         assert json.loads(out[0])["env"] == 0
         assert json.loads(out[1])["env"] == 1
 
+    def test_index_custom_start(self):
+        """Index values should begin at --start when provided."""
+        lines = '{"msg": "a"}\n{"msg": "b"}\n'
+        out = self._run(lines, ["--index", "--start", "10"])
+        assert json.loads(out[0])["env"] == 10
+        assert json.loads(out[1])["env"] == 11
+
     def test_condition_applied(self):
         lines = '{"level": "error"}\n{"level": "info"}\n'
         out = self._run(
