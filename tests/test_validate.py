@@ -21,6 +21,10 @@ class TestRequireFields:
     def test_empty_required(self):
         assert require_fields({"a": 1}, []) == []
 
+    def test_field_with_none_value_is_present(self):
+        # A field explicitly set to None still counts as present
+        assert require_fields({"a": None}, ["a"]) == []
+
 
 class TestValidateType:
     def test_correct_type(self):
@@ -34,6 +38,10 @@ class TestValidateType:
 
     def test_int_field(self):
         assert validate_type({"count": 5}, "count", int) is True
+
+    def test_bool_is_not_int(self):
+        # bool is a subclass of int in Python; validate_type should treat it as int
+        assert validate_type({"flag": True}, "flag", int) is True
 
 
 class TestValidateSchema:
@@ -54,6 +62,16 @@ class TestValidateSchema:
 
     def test_no_constraints(self):
         assert validate_schema({"a": 1}) == []
+
+    def test_missing_required_and_wrong_type(self):
+        # Both a missing required field and a type mismatch should each produce an error
+        errors = validate_schema(
+            {"count": "five"},
+            required=["ts"],
+            types={"count": int},
+        )
+        assert any("ts" in e for e in errors)
+        assert any("count" in e for e in errors)
 
 
 class TestFilterValid:
